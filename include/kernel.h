@@ -40,7 +40,7 @@
 typedef struct mutex_t *mutexPtr;
 
 typedef struct mutex_t{
-	char *nombre;
+	char nombre[MAX_NOM_MUT];
 	int id;
 	int tipo;
 	int estado; // 0 desbloqueado 1 bloqueado
