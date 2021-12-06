@@ -604,7 +604,51 @@ int sis_lock_mutex(){
 }
 
 int sis_unlock_mutex(){
+	int id_mutex=leer_registro(1);
 
+	int existe=0;
+	for (int i = 0; i < p_proc_actual->num_mutex_asignados; i++)
+	{
+		if(id_mutex==p_proc_actual->lista_mutex[i]){
+			existe=1;
+			break;
+		}
+	}
+	if(existe==0){
+		return -3;
+	}
+	else{
+		mutex* auxMutex=lista_mutex_global.primero;
+		mutex* mutexLock;
+		while(auxMutex!=NULL){
+			if(id_mutex==auxMutex->id){
+				mutexLock=auxMutex;
+				break;
+			}
+			auxMutex=auxMutex->siguiente;
+		}
+		if(mutexLock->tipo==NO_RECURSIVO){
+			if(mutexLock->id_proceso_propietario==p_proc_actual->id){
+				mutexLock->estado=DESBLOQUEADO_MUTEX;
+				//Quitamos al propietario que lo tenia bloqueado
+				mutexLock->id_proceso_propietario=-1;
+				//sale
+				return 0;
+			}
+			//Error no es el propietario
+			return -6;
+		}
+		else{
+			if(mutexLock->id_proceso_propietario!=p_proc_actual->id)
+				return -6;
+			while(mutexLock->veces_bloqueado>0){
+				mutexLock->veces_bloqueado--;
+			}
+			mutexLock->estado=DESBLOQUEADO_MUTEX;
+			mutexLock->id_proceso_propietario=-1;
+			return 0;
+		}
+	}
 }
 
 int sis_cerrar_mutex(){
