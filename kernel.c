@@ -138,9 +138,42 @@ static BCP * planificador(){
  */
 static void liberar_proceso(){
 	BCP * p_proc_anterior;
-	
+	if(lista_mutex_global.primero!=NULL){
+		mutex* auxMutex;
+		int i=0;
+		while (auxMutex!=NULL)
+		{
+			lista_mutex_global_auxiliar[i].estado=auxMutex->estado;
+			lista_mutex_global_auxiliar[i].id=auxMutex->estado;
+			for(int j=0;j<strlen(auxMutex->nombre); j++)
+				lista_mutex_global_auxiliar[i].nombre[j]=auxMutex->nombre[j];	
+			lista_mutex_global_auxiliar[i].num_procesos_usandolo=auxMutex->num_procesos_usandolo;
+			//no se lo pasamos porque vamos a perder la referencia igualmente
+			lista_mutex_global_auxiliar[i].siguiente=NULL;
+			lista_mutex_global_auxiliar[i].tipo=auxMutex->tipo;
+			i++;
+			printk("CARGANDO DATOS LINKED LIST A ARRAY: [%s]", auxMutex->nombre);
+			auxMutex=auxMutex->siguiente;
+		}
+	}
+
 	// Nuestro PROBLEMA ESTA AQUI
 	liberar_imagen(p_proc_actual->info_mem); /* liberar mapa */
+
+	if(num_mutex>0){
+		insertar_ultimo_mutex(&lista_mutex_global, &lista_mutex_global_auxiliar[0]);
+		mutex* auxMutex=lista_mutex_global.primero;
+		for(int i = 0; i < num_mutex; i++)
+		{
+			if(i<num_mutex-1 &&i>0){
+				insertar_ultimo_mutex(&lista_mutex_global, &lista_mutex_global_auxiliar[i]);
+				//si borro el array, que pasa?
+			}
+			printk("ACTUALIZANDO LISTA LINKED LIST: [%s]", auxMutex->nombre);
+			auxMutex=auxMutex->siguiente;
+		}
+		
+	}
 
 	p_proc_actual->estado=TERMINADO;
 	eliminar_primero(&lista_listos); /* proc. fuera de listos */
@@ -415,7 +448,7 @@ int sis_dormir(){
 /*
  * Inserta un mutex al final de la lista.
  */
-static void insertar_ultimo_mutex(lista_Mutex* lista, mutex* mutex){
+ void insertar_ultimo_mutex(lista_Mutex* lista, mutex* mutex){
 	if (lista->primero==NULL)
 		lista->primero= mutex;
 	else
@@ -472,7 +505,12 @@ int sis_crear_mutex(){
 		}
 		auxMutex = auxMutex->siguiente;
 	}
-	newMutex->nombre = leer_registro(1);
+	for (int  i = 0; i < strlen(leer_registro(1)); i++)
+	{
+		newMutex->nombre[i] = leer_registro(1);
+	}
+	
+		
 	newMutex->tipo = leer_registro(2);
 	newMutex->estado = DESBLOQUEADO_MUTEX;
 	newMutex->siguiente = NULL;
