@@ -465,19 +465,17 @@ int sis_crear_mutex(){
 
 	mutex *newMutex = (mutex*)malloc(sizeof(mutex));
 	mutex *auxMutex = lista_mutex_global.primero;
+	
+	char* nombre=(char*)leer_registro(1);
+	printk("\n\n\n\n\nPONIENDOLE NOMBRE AL MUTEX : (%s)\n\n\n\n", nombre);
 	while(auxMutex != NULL){
-		if(auxMutex->nombre==(char*)leer_registro(1)){
+		if(strcmp(auxMutex->nombre, nombre)==0){
 			free(newMutex);
 			return -2;
 		}
 		auxMutex = auxMutex->siguiente;
 	}
-	for (int i = 0; i <strlen((char*)leer_registro(1)); i++)
-	{
-		newMutex->nombre[i] = ((char*)leer_registro(1))[i];
-	}
-	
-	
+	strcpy(newMutex->nombre, nombre);
 	newMutex->tipo = leer_registro(2);
 	newMutex->estado = DESBLOQUEADO_MUTEX;
 	newMutex->siguiente = NULL;
