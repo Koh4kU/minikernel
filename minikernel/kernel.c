@@ -466,13 +466,18 @@ int sis_crear_mutex(){
 	mutex *newMutex = (mutex*)malloc(sizeof(mutex));
 	mutex *auxMutex = lista_mutex_global.primero;
 	while(auxMutex != NULL){
-		if(auxMutex->nombre == leer_registro(1)){
+		if(auxMutex->nombre==(char*)leer_registro(1)){
 			free(newMutex);
 			return -2;
 		}
 		auxMutex = auxMutex->siguiente;
 	}
-	newMutex->nombre = (char*)leer_registro(1);
+	for (int i = 0; i <strlen((char*)leer_registro(1)); i++)
+	{
+		newMutex->nombre[i] = ((char*)leer_registro(1))[i];
+	}
+	
+	
 	newMutex->tipo = leer_registro(2);
 	newMutex->estado = DESBLOQUEADO_MUTEX;
 	newMutex->siguiente = NULL;
@@ -509,7 +514,7 @@ int sis_abrir_mutex(){
 		return -1;
 	}
 	else{
-		char *nombre = leer_registro(1);
+		char *nombre = (char*)leer_registro(1);
 		mutex *mutexAbrir = lista_mutex_global.primero;
 		//printk("\nMutex(%s,%d)\n", mutexAbrir->nombre, mutexAbrir->id);
 
@@ -582,7 +587,7 @@ int sis_cerrar_mutex(){
 			if(auxMutex->id == idMutexCerrar){
 				//Decrementamos el numero de procesos que tienen abierto el mutex
 				auxMutex->num_procesos_usandolo--;
-				printk("\nNumero procesos usando mutex (%d) Nombre Mutex(%s)\n", auxMutex->num_procesos_usandolo, auxMutex->nombre);
+				printk("\nNumero procesos usando mutex (%d) Id mutex(%s)\n", auxMutex->num_procesos_usandolo, auxMutex->nombre);
 				printk("auxMutex = %s", lista_mutex_global.primero->nombre);
 				if(auxMutex->num_procesos_usandolo == 0){
 					eliminar_elem_mutex(&lista_mutex_global, auxMutex);
