@@ -55,7 +55,6 @@ typedef struct{
 
 // Lista global de mutex del sistema
 lista_Mutex lista_mutex_global = {NULL, NULL};
-mutex lista_mutex_global_auxiliar[NUM_MUT];
 //
 
 typedef struct BCP_t *BCPptr;

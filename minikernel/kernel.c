@@ -480,6 +480,8 @@ int sis_crear_mutex(){
 	newMutex->estado = DESBLOQUEADO_MUTEX;
 	newMutex->siguiente = NULL;
 	newMutex->num_procesos_usandolo = 0;
+	newMutex->veces_bloqueado=0;
+	newMutex->id_proceso_propietario=-1;
 	// Para poder bloquear un proceso tenemos que pasar a sis_domir el
 	// valor de cuanto tiempo queremos que duerma. En nuestro caso asignamos 1 seg
 	while(num_mutex == NUM_MUT){
@@ -551,7 +553,54 @@ int sis_abrir_mutex(){
 }
 
 int sis_lock_mutex(){
-
+	int id_mutex= leer_registro(1);
+	//booleano donde 0 no existe y 1 existe
+	int existe=0;
+	for (int i = 0; i < p_proc_actual->num_mutex_asignados; i++)
+	{
+		if(id_mutex==p_proc_actual->lista_mutex[i]){
+			existe=1;
+			break;
+		}
+	}
+	if(existe==0){
+		return -3;
+	}
+	else{
+		mutex* auxMutex=lista_mutex_global.primero;
+		mutex* mutexLock;
+		while(auxMutex!=NULL){
+			if(id_mutex==auxMutex->id){
+				mutexLock=auxMutex;
+				break;
+			}
+			auxMutex=auxMutex->siguiente;
+		}
+		if(mutexLock->tipo==NO_RECURSIVO){
+			if(mutexLock->id_proceso_propietario==p_proc_actual->id){
+				//Error: Ya es propietario del mutex no recursivo a bloquear 
+				return -5;	
+			}
+			while(mutexLock->estado==BLOQUEADO_MUTEX){
+				escribir_registro(1, 1);
+				sis_dormir();
+			}
+			mutexLock->estado=BLOQUEADO_MUTEX;
+			mutexLock->id_proceso_propietario=p_proc_actual->id;
+		}
+		else{
+			while(mutexLock->id_proceso_propietario!=p_proc_actual->id && mutexLock->id_proceso_propietario!=-1){
+				escribir_registro(1, 1);
+				sis_dormir();	
+			}
+			if(mutexLock->estado==DESBLOQUEADO_MUTEX)
+				mutexLock->estado=BLOQUEADO_MUTEX;
+			mutexLock->veces_bloqueado++;
+			mutexLock->id_proceso_propietario=p_proc_actual->id;
+		}
+	}
+	
+	
 }
 
 int sis_unlock_mutex(){
