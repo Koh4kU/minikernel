@@ -46,6 +46,8 @@ typedef struct mutex_t{
 	int estado; // 0 desbloqueado 1 bloqueado
 	int num_procesos_usandolo;
 	mutexPtr siguiente;
+	int veces_bloqueado;
+	int id_proceso_propietario;
 }mutex;
 
 typedef struct{
