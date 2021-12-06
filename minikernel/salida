@@ -1,0 +1,24 @@
+init: comienza
+-> PROC 0: CREAR PROCESO
+init: termina
+-> FIN PROCESO 0
+-> C.CONTEXTO POR FIN: de 0 a 1
+prueba_dormir: comienza
+-> PROC 1: CREAR PROCESO
+-> PROC 1: CREAR PROCESO
+prueba_dormir: termina
+-> FIN PROCESO 1
+-> C.CONTEXTO POR FIN: de 1 a 0
+ID del proceso actual es: 0
+dormilon (0): comienza
+dormilon (0) duerme 1 segundo
+Me cago en tus muertos 1 dormilon (0) duerme 1 segundos
+Me cago en tus muertos 1 dormilon (0): termina
+-> FIN PROCESO 0
+-> C.CONTEXTO POR FIN: de 0 a 2
+ID del proceso actual es: 2
+dormilon (2): comienza
+dormilon (2) duerme 1 segundo
+Me cago en tus muertos 1 dormilon (2) duerme 3 segundos
+Me cago en tus muertos 3 dormilon (2): termina
+-> FIN PROCESO 2
