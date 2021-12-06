@@ -472,7 +472,7 @@ int sis_crear_mutex(){
 		}
 		auxMutex = auxMutex->siguiente;
 	}
-	newMutex->nombre = leer_registro(1);
+	newMutex->nombre = (char*)leer_registro(1);
 	newMutex->tipo = leer_registro(2);
 	newMutex->estado = DESBLOQUEADO_MUTEX;
 	newMutex->siguiente = NULL;
