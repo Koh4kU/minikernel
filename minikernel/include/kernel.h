@@ -36,28 +36,6 @@
  * Se va a modificar al incluir la funcionalidad pedida.
  *
  */
-//Creado por nosotros
-typedef struct mutex_t *mutexPtr;
-
-typedef struct mutex_t{
-	char nombre[MAX_NOM_MUT];
-	int id;
-	int tipo;
-	int estado; // 0 desbloqueado 1 bloqueado
-	int num_procesos_usandolo;
-	mutexPtr siguiente;
-	int veces_bloqueado;
-	int id_proceso_propietario;
-}mutex;
-
-typedef struct{
-	mutex *primero;
-	mutex *ultimo;
-} lista_Mutex;
-
-// Lista global de mutex del sistema
-lista_Mutex lista_mutex_global = {NULL, NULL};
-//
 
 typedef struct BCP_t *BCPptr;
 
@@ -121,6 +99,29 @@ typedef struct{
 } servicio;
 
 
+//Creado por nosotros
+typedef struct mutex_t *mutexPtr;
+
+typedef struct mutex_t{
+	char nombre[MAX_NOM_MUT];
+	int id;
+	int tipo;
+	int estado; // 0 desbloqueado 1 bloqueado
+	int num_procesos_usandolo;
+	mutexPtr siguiente;
+	int veces_bloqueado;
+	int id_proceso_propietario;
+	lista_BCPs lista_procesos_lock;
+}mutex;
+
+typedef struct{
+	mutex *primero;
+	mutex *ultimo;
+} lista_Mutex;
+
+// Lista global de mutex del sistema
+lista_Mutex lista_mutex_global = {NULL, NULL};
+//
 /*
  * Prototipos de las rutinas que realiza = NULLn cada llamada al sistema
  */
