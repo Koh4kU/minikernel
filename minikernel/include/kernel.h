@@ -106,7 +106,7 @@ typedef struct mutex_t{
 	char nombre[MAX_NOM_MUT];
 	int id;
 	int tipo;
-	int estado; // 0 desbloqueado 1 bloqueado
+	int estado; // 0 bloqueado 1 desbloqueado
 	int num_procesos_usandolo;
 	mutexPtr siguiente;
 	int veces_bloqueado;
