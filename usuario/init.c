@@ -67,8 +67,8 @@ ALGO COMENTE ESTA PARTE Y DESCOMENTE LA PRUEBA CORRESPONDIENTE */
 /* PRIMERA PRUEBA DE MUTEX
 	if (crear_proceso("prueba_mutex1")<0)
 		printf("Error creando prueba_mutex1\n");
-
 */
+
 // SEGUNDA PRUEBA DE MUTEX
 	if (crear_proceso("prueba_mutex2")<0)
 		printf("Error creando prueba_mutex2\n");
