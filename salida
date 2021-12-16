@@ -3,22 +3,61 @@ init: comienza
 init: termina
 -> FIN PROCESO 0
 -> C.CONTEXTO POR FIN: de 0 a 1
-prueba_dormir: comienza
+prueba_RR2: comienza
 -> PROC 1: CREAR PROCESO
 -> PROC 1: CREAR PROCESO
-prueba_dormir: termina
+-> PROC 1: CREAR PROCESO
+-> PROC 1: CREAR PROCESO
+-> PROC 1: CREAR PROCESO
+prueba_RR2: termina
 -> FIN PROCESO 1
 -> C.CONTEXTO POR FIN: de 1 a 0
+-> TRATANDO INT. DE RELOJ
+Proceso actual tiempo rodaja: 10
+-> TRATANDO INT. DE RELOJ
+Proceso actual tiempo rodaja: 9
+-> TRATANDO INT. DE RELOJ
+Proceso actual tiempo rodaja: 8
 ID del proceso actual es: 0
-dormilon (0): comienza
-dormilon (0) duerme 1 segundo
-Me cago en tus muertos 1 dormilon (0) duerme 1 segundos
-Me cago en tus muertos 1 dormilon (0): termina
+mudo (0): termina
 -> FIN PROCESO 0
 -> C.CONTEXTO POR FIN: de 0 a 2
+-> TRATANDO INT. DE RELOJ
+Proceso actual tiempo rodaja: 10
+-> TRATANDO INT. DE RELOJ
+Proceso actual tiempo rodaja: 9
 ID del proceso actual es: 2
-dormilon (2): comienza
-dormilon (2) duerme 1 segundo
-Me cago en tus muertos 1 dormilon (2) duerme 3 segundos
-Me cago en tus muertos 3 dormilon (2): termina
+mudo (2): termina
 -> FIN PROCESO 2
+-> C.CONTEXTO POR FIN: de 2 a 3
+-> TRATANDO INT. DE RELOJ
+Proceso actual tiempo rodaja: 10
+-> TRATANDO INT. DE RELOJ
+Proceso actual tiempo rodaja: 9
+-> TRATANDO INT. DE RELOJ
+Proceso actual tiempo rodaja: 8
+-> TRATANDO INT. DE RELOJ
+Proceso actual tiempo rodaja: 7
+ID del proceso actual es: 3
+mudo (3): termina
+-> FIN PROCESO 3
+-> C.CONTEXTO POR FIN: de 3 a 4
+-> TRATANDO INT. DE RELOJ
+Proceso actual tiempo rodaja: 10
+-> TRATANDO INT. DE RELOJ
+Proceso actual tiempo rodaja: 9
+-> TRATANDO INT. DE RELOJ
+Proceso actual tiempo rodaja: 8
+ID del proceso actual es: 4
+mudo (4): termina
+-> FIN PROCESO 4
+-> C.CONTEXTO POR FIN: de 4 a 5
+-> TRATANDO INT. DE RELOJ
+Proceso actual tiempo rodaja: 10
+-> TRATANDO INT. DE RELOJ
+Proceso actual tiempo rodaja: 9
+-> TRATANDO INT. DE RELOJ
+Proceso actual tiempo rodaja: 8
+ID del proceso actual es: 5
+mudo (5): termina
+-> FIN PROCESO 5

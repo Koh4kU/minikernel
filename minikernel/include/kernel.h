@@ -48,6 +48,7 @@ typedef struct BCP_t {
 		int dormir_t;
 		int lista_mutex[NUM_MUT_PROC];
 		int num_mutex_asignados;
+		int tiempo_rodaja;
 		//
 	BCPptr siguiente;		/* puntero a otro BCP */
 	void *info_mem;			/* descriptor del mapa de memoria */

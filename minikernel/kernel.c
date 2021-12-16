@@ -21,6 +21,7 @@
 int nivelAnterior; // Variable global que almacena el nivel previo a una interrupcion
 int num_mutex = 0; // Variable global que almacena el numero actual de mutex en el sistema;
 int id_mutex = 0;
+int nivelAnterior_sw;
 //
 
 /*
@@ -139,7 +140,6 @@ static BCP * planificador(){
 static void liberar_proceso(){
 	BCP * p_proc_anterior;
 	
-	// Nuestro PROBLEMA ESTA AQUI
 	liberar_imagen(p_proc_actual->info_mem); /* liberar mapa */
 
 	p_proc_actual->estado=TERMINADO;
@@ -148,6 +148,9 @@ static void liberar_proceso(){
 	/* Realizar cambio de contexto */
 	p_proc_anterior=p_proc_actual;
 	p_proc_actual=planificador();
+
+	//Inicializamos la rodaja del nuevo proceso en su totalidad
+	p_proc_actual->tiempo_rodaja=TICKS_POR_RODAJA;
 
 
 	printk("-> C.CONTEXTO POR FIN: de %d a %d\n",
@@ -217,6 +220,18 @@ static void int_terminal(){
 static void int_reloj(){
 
 	printk("-> TRATANDO INT. DE RELOJ\n");
+	//Planificacion round robin
+	printk("Proceso actual tiempo rodaja: %d\n", p_proc_actual->tiempo_rodaja);
+	if(p_proc_actual->tiempo_rodaja<=0){
+		//Fija el nivel de interrupcion solo
+		activar_int_SW();
+	}
+	else{
+		//En caso de que no queden mas procesos, el proceso padre de todos no consume la rodaja hasta que no hayan mas procesos en la cola.ls
+		if(lista_listos.primero!=NULL)
+			p_proc_actual->tiempo_rodaja--;
+	}
+	//
 
 	BCP * index_lista_bloqueados = lista_procesos_esperando_plazos.primero;
 	while(index_lista_bloqueados != NULL){
@@ -261,9 +276,24 @@ static void tratar_llamsis(){
 /*
  * Tratamiento de interrupciuones software
  */
-static void int_sw(){
 
+
+static void int_sw(){
 	printk("-> TRATANDO INT. SW\n");
+	//creado por nosotros
+	BCP* procesoActual;
+	p_proc_actual->estado=LISTO;
+	procesoActual=p_proc_actual;
+	eliminar_primero(&lista_listos);
+	insertar_ultimo(&lista_listos, procesoActual);
+	p_proc_actual=planificador();
+
+	p_proc_actual->tiempo_rodaja=TICKS_POR_RODAJA;
+	
+	cambio_contexto(&procesoActual->contexto_regs, &p_proc_actual->contexto_regs);
+
+	fijar_nivel_int(nivelAnterior_sw);
+	//	
 
 	return;
 }
@@ -300,6 +330,7 @@ static int crear_tarea(char *prog){
 		p_proc->estado=LISTO;
 		//Creado por nosotros
 		p_proc->num_mutex_asignados = 0;
+		p_proc->tiempo_rodaja = TICKS_POR_RODAJA;
 		//
 
 		/* lo inserta al final de cola de listos */
@@ -376,12 +407,6 @@ int sis_terminar_proceso(){
 		}
 		
 	}
-	/*printk("Lista global al terminar el proceso %d\n", p_proc_actual->id);
-	mutex* auxMutex=lista_mutex_global.primero;
-	while(auxMutex!=NULL){
-		printk("\tMUTEX %d veces:%d propietario:%d\n", auxMutex->id, auxMutex->veces_bloqueado, auxMutex->id_proceso_propietario);
-		auxMutex=auxMutex->siguiente;
-	}*/
 	printk("-> FIN PROCESO %d\n", p_proc_actual->id);
 	liberar_proceso();
 
