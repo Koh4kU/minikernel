@@ -21,7 +21,6 @@
 int nivelAnterior; // Variable global que almacena el nivel previo a una interrupcion
 int num_mutex = 0; // Variable global que almacena el numero actual de mutex en el sistema;
 int id_mutex = 0;
-int nivelAnterior_sw;
 //
 
 /*
@@ -291,8 +290,6 @@ static void int_sw(){
 	p_proc_actual->tiempo_rodaja=TICKS_POR_RODAJA;
 	
 	cambio_contexto(&procesoActual->contexto_regs, &p_proc_actual->contexto_regs);
-
-	fijar_nivel_int(nivelAnterior_sw);
 	//	
 
 	return;
@@ -388,12 +385,9 @@ int sis_terminar_proceso(){
 //Creado por nosotros
 	// Entra si hay algun mutex abierto. Elimina siempre el que esta en la posicion 0 porque por dentro se 
 	// actualiza la lista sola.
-	
-	//printk("PROCESO %d NUMERO DE MUTEX ASIGNADOS %d\n", p_proc_actual->id, p_proc_actual->num_mutex_asignados);
 	if(p_proc_actual->num_mutex_asignados > 0){
 		for (int i = 0; i < p_proc_actual->num_mutex_asignados;){
 			escribir_registro(1 ,p_proc_actual->lista_mutex[i]);
-			//printk("Lista mutex en terminar del proceso %d\n\t mutex:%d\n",p_proc_actual->id, p_proc_actual->lista_mutex[i]);
 			mutex* auxMutex=lista_mutex_global.primero;
 			while(auxMutex!=NULL){
 				if(auxMutex->id==p_proc_actual->lista_mutex[i]){
@@ -401,6 +395,7 @@ int sis_terminar_proceso(){
 				}
 				auxMutex=auxMutex->siguiente;
 			}
+			//Desbloqueamos todos los mutex que han sido bloqueados por el proceso que se va a cerrar
 			while(auxMutex->veces_bloqueado>0 && auxMutex!=NULL && auxMutex->id_proceso_propietario == p_proc_actual->id)
 				sis_unlock_mutex();
 			sis_cerrar_mutex();
@@ -435,7 +430,7 @@ int sis_dormir(){
 	p_proc_actual->estado = BLOQUEADO;
 	BCP * p_bloqueado = p_proc_actual;
 	insertar_ultimo(&lista_procesos_esperando_plazos, p_bloqueado);
-	// Asignamos el sieguiente proceso de la lista de listos como como el actual
+	// Asignamos el siguiente proceso de la lista de listos como como el actual
 	p_proc_actual = planificador();
 	// Cambiamos el contexto para salvar los registros del proceso bloqueado y asignar los del nuevo
 	cambio_contexto(&p_bloqueado->contexto_regs, &p_proc_actual->contexto_regs);
@@ -490,14 +485,12 @@ static void eliminar_elem_mutex(lista_Mutex* lista, mutex* mutex_a_eliminar){
 			maux->siguiente = maux->siguiente->siguiente;
 		}
 	}
-	// Añadir para eliminar del array global que contiene booleanos de uso de ids para mutex
 }
 
 int sis_crear_mutex(){
 	// Comprobar si existen ya mutex con el nombre pasado y si num_mutex == MAX_MUTEX
 	// Si ya no se pueden crear mas mutex, devuelve -1.
 	// Si existe un mutex con el nombre, devuelve -2.
-	//printk("Entramos en CREAR MUTEX\n");
 
 	mutex *newMutex = (mutex*)malloc(sizeof(mutex));
 	mutex *auxMutex = lista_mutex_global.primero;
@@ -532,15 +525,7 @@ int sis_crear_mutex(){
 	num_mutex++;
 	//Añadimos a la lista global el nuevo mutex
 	insertar_ultimo_mutex(&lista_mutex_global, newMutex);
-
-	auxMutex = lista_mutex_global.primero;
-	/*printk("Lista Mutex(");
-	while(auxMutex != NULL){
-		printk("Nombre:%s, ID:%d,", auxMutex->nombre, auxMutex->id);
-		auxMutex = auxMutex->siguiente;
-	}
-	printk(")\n");*/
-	//Puede haber problemas aqui
+	//Incrementamos las variables de los contadores de mutex tanto de la lista global como de la lista del proceso, además de insertarlo en dicha lista
 	p_proc_actual->lista_mutex[p_proc_actual->num_mutex_asignados] = newMutex->id;
 	p_proc_actual->num_mutex_asignados++;
 	newMutex->num_procesos_usandolo++;
@@ -548,7 +533,6 @@ int sis_crear_mutex(){
 }
 
 int sis_abrir_mutex(){
-	// Esto posiblemente se use en arbir mutex o en el lock.
 	// Añadimos a la lista local de mutex del proceso. 
 	if(p_proc_actual->num_mutex_asignados == NUM_MUT_PROC){
 		return -1;
@@ -556,49 +540,32 @@ int sis_abrir_mutex(){
 	else{
 		char *nombre = (char*)leer_registro(1);
 		mutex *mutexAbrir = lista_mutex_global.primero;
-		//printk("\nMutex(%s,%d)\n", mutexAbrir->nombre, mutexAbrir->id);
-
 		while(mutexAbrir != NULL){
-
+			//Buscamos el mutex en la lista global
 			if(strcmp(mutexAbrir->nombre, nombre) == 0){
-				// Al insertar aqui estamos eliminando la referencia al mutex siguiente en la lista global
-				// Hay que modificar eso para que no se sobreescriba. Quiza, como sabemos que el tamaño de 
-				// descriptores maximo es 4, podemos crear un array de mutex, en el cual este la referencia a estos
-				// sin alterar sus campos. Esto implicaria no usar el metodo insertar ultimo para la lista de mutex
-				// del proceso actual. O podriamos meter manualmente el proceso sin llamar a ninguna funcion
-
-				// Acabo de descubrir que no hace falta que un proceso sepa cuales son sus descriptores en una lista
-				// sino que cuando se llama a abrir, este devuelve el id del mutex y 
 				for (int i = 0; i < p_proc_actual->num_mutex_asignados; i++){
+					//Se comprueba si el proceso habia abierto ya con anterioridad el mutex
 					if(mutexAbrir->id == p_proc_actual->lista_mutex[i])
 						return mutexAbrir->id; // Si ya esta asignado al proceso
 				}
-				
+				//En caso de que no se haya abierto con anterioridad por el proceso, se añade a la lista local del proceso
 				p_proc_actual->lista_mutex[p_proc_actual->num_mutex_asignados] = mutexAbrir->id;
 				mutexAbrir->num_procesos_usandolo++;
 				p_proc_actual->num_mutex_asignados++;
-				/*printk("Lista Local De Mutex Del Proceso ID(%d)(", p_proc_actual->id);
-				for (int i = 0; i < p_proc_actual->num_mutex_asignados; i++){
-					printk(" Id mutex: %d", p_proc_actual->lista_mutex[i]);
-				}
-				printk(")\n");*/
 				return mutexAbrir->id;
 			}
-			//printk("\nDEPURANDO\n");
 			mutexAbrir = mutexAbrir->siguiente;	
 		}
 		//Devuelve -3 si el mutex no existe
-		//free(mutexAbrir);
 		return -3;
 	}
 }
 
 int sis_lock_mutex(){
-
 	int id_mutex= leer_registro(1);
-	//printk("\nINTENTANDO BLOQUEAR MUTEX: %d\n", id_mutex);
 	//booleano donde 0 no existe y 1 existe
 	int existe=0;
+	//Buscamos si existe o no existe el mutex
 	for (int i = 0; i < p_proc_actual->num_mutex_asignados; i++)
 	{
 		if(id_mutex==p_proc_actual->lista_mutex[i]){
@@ -607,11 +574,13 @@ int sis_lock_mutex(){
 		}
 	}
 	if(existe==0){
+		//Error -3: El mutex no existe
 		return -3;
 	}
 	else{
 		mutex* auxMutex=lista_mutex_global.primero;
 		mutex* mutexLock;
+		//Buscamos el mutex en la lista global
 		while(auxMutex!=NULL){
 			if(id_mutex==auxMutex->id){
 				mutexLock=auxMutex;
@@ -619,7 +588,6 @@ int sis_lock_mutex(){
 			}
 			auxMutex=auxMutex->siguiente;
 		}
-		
 		if(mutexLock->tipo==NO_RECURSIVO){
 			if(mutexLock->id_proceso_propietario==p_proc_actual->id){
 				//Error: Ya es propietario del mutex no recursivo a bloquear 
@@ -633,8 +601,6 @@ int sis_lock_mutex(){
 			mutexLock->estado=BLOQUEADO_MUTEX;
 			mutexLock->id_proceso_propietario=p_proc_actual->id;
 			mutexLock->veces_bloqueado=1;
-			//printk("\nSE HA LOCKEADO CORRECTAMENTE EL MUTEX: %d por el proceso: %d y quedan: %d veces por desbloquear\n"
-			//	, mutexLock->id, mutexLock->id_proceso_propietario, mutexLock->veces_bloqueado);
 			return 0;
 		}
 		else{
@@ -646,8 +612,6 @@ int sis_lock_mutex(){
 				mutexLock->estado=BLOQUEADO_MUTEX;
 			mutexLock->veces_bloqueado++;
 			mutexLock->id_proceso_propietario=p_proc_actual->id;
-			//printk("\nSE HA LOCKEADO CORRECTAMENTE EL MUTEX: %d por el proceso: %d y quedan: %d veces por desbloquear\n"
-			//	, mutexLock->id, mutexLock->id_proceso_propietario, mutexLock->veces_bloqueado);
 			return 0;
 		}
 	}
@@ -657,7 +621,7 @@ int sis_lock_mutex(){
 
 int sis_unlock_mutex(){
 	int id_mutex=leer_registro(1);
-
+	//0 no existe, 1 existe
 	int existe=0;
 	for (int i = 0; i < p_proc_actual->num_mutex_asignados; i++)
 	{
@@ -667,7 +631,7 @@ int sis_unlock_mutex(){
 		}
 	}
 	if(existe==0){
-		//printk("ERROR -3");
+		//Error -3: El mutex no existe
 		return -3;
 	}
 	else{
@@ -680,8 +644,8 @@ int sis_unlock_mutex(){
 			}
 			auxMutex=auxMutex->siguiente;
 		}
-		//printk("El mutex %s con id %d y de tipo %d se va a desbloquear\n", mutexLock->nombre, mutexLock->id, mutexLock->tipo);
 		if(mutexLock->tipo==NO_RECURSIVO){
+			//Comprobamos que el proceso actual es el propietario y que el mutex tiene algun propietario
 			if(mutexLock->id_proceso_propietario==p_proc_actual->id && mutexLock->id_proceso_propietario!=-1){
 				mutexLock->estado=DESBLOQUEADO_MUTEX;
 				//Quitamos al propietario que lo tenia bloqueado
@@ -690,35 +654,33 @@ int sis_unlock_mutex(){
 				if(mutexLock->lista_procesos_lock.primero!=NULL){
 					//Desbloqueamos todos los procesos que se habian quedado esperando en el mutex 
 					while(mutexLock->lista_procesos_lock.primero!=NULL){
+						//Lanzamos una interrupcion de reloj para poder desbloquear a los procesos
 						nivelAnterior=fijar_nivel_int(NIVEL_3);
 						mutexLock->lista_procesos_lock.primero->estado=LISTO;
 						BCP* proceso=mutexLock->lista_procesos_lock.primero;
 						eliminar_primero(&mutexLock->lista_procesos_lock);
 						insertar_ultimo(&lista_listos, proceso);
+						//Volvemos a este nivel
 						fijar_nivel_int(nivelAnterior);
-						//printk("SE HA DESBLOQUEADO EL MUTEX: %d", mutexLock->id);
 					}
 				}
 				return 0;
 			}
 			//Error no es el propietario
-			//printk("ERROR -6");
 			return -6;
 		}
 		else{
 			if(mutexLock->id_proceso_propietario!=p_proc_actual->id && mutexLock->id_proceso_propietario!=-1){
-				//printk("Propietario: %d y proceso Actual: %d", mutexLock->id_proceso_propietario, p_proc_actual->id);
-				//printk("ERROR -6: 2\n");
+				//Error -6: El proceso no es el propietario del mutex
 				return -6;
 			}
 			mutexLock->veces_bloqueado--;
-			//printk("VECES QUEDA POR BLOQUEAR: %d\n", mutexLock->veces_bloqueado);
 			if(mutexLock->veces_bloqueado==0){
 				mutexLock->estado=DESBLOQUEADO_MUTEX;
 				//Quitamos al propietario que lo tenia bloqueado
 				mutexLock->id_proceso_propietario=-1;
 			}
-			//Puede haber problemas aqui
+			//Comprobamos que el mutex no está bloqueado y que tiene procesos que lo esta usando
 			if(mutexLock->lista_procesos_lock.primero!=NULL&&mutexLock->veces_bloqueado==0){
 				//despertamos a todos los procesos que estaban esperando al lock del mutex
 				while(mutexLock->lista_procesos_lock.primero!=NULL){
@@ -729,7 +691,6 @@ int sis_unlock_mutex(){
 				
 					insertar_ultimo(&lista_listos, proceso);
 					fijar_nivel_int(nivelAnterior);
-					//printk("SE HA DESBLOQUEADO EL MUTEX: %d", mutexLock->id);
 				}
 			}
 			return 0;
@@ -743,18 +704,15 @@ int sis_cerrar_mutex(){
 	// Eliminado esta a false
 	int eliminado = 0;
 
-		/*printk("LISTA LOCAL PROCESO %d ANTES DE ELIMINARLO\n", p_proc_actual->id);
-	for (int i = 0; i < p_proc_actual->num_mutex_asignados; i++)
-	{
-		printk("MUTEX %d\n", p_proc_actual->lista_mutex[i]);
-	}
-	*/
+	//Eliminamos el mutex indicado
 	for (int i = 0; i < p_proc_actual->num_mutex_asignados; i++){
 		if(p_proc_actual->lista_mutex[i] == idMutexCerrar){
 			p_proc_actual->lista_mutex[i] = -1;
 			eliminado = 1;
 		}
+		//En caso de que se haya eliminado tenemos que actualizar el array
 		if(eliminado == 1){
+			//Desde el elemento eliminado hasta el penultimo, trasladamos los id's una posicion a la izquierda
 			if(i < p_proc_actual->num_mutex_asignados - 1)
 				p_proc_actual->lista_mutex[i] = p_proc_actual->lista_mutex[i + 1];
 			else
@@ -765,17 +723,7 @@ int sis_cerrar_mutex(){
 	if(eliminado == 1){
 		//Decrementamos el numero de mutex asignados al proceso
 		p_proc_actual->num_mutex_asignados--;
-/*
-		printk("Numero de mutex asignados al proceso: %d ->num=%d\n", p_proc_actual->id, p_proc_actual->num_mutex_asignados);
-		printk("LISTA LOCAL PROCESO %d DESPUES DE ELIMINARLO\n", p_proc_actual->id);
-	for (int i = 0; i < p_proc_actual->num_mutex_asignados; i++)
-	{
-		printk("MUTEX %d\n", p_proc_actual->lista_mutex[i]);
-	}
-		printk("EN EL PROCESO %d QUEDAN %d MUTEX EN EL PROCESO\n", p_proc_actual->id, p_proc_actual->num_mutex_asignados);
-	*/	
 		mutex *auxMutex = lista_mutex_global.primero;
-		//printk("\n%s", auxMutex->nombre);
 		while(auxMutex != NULL){
 			if(auxMutex->id == idMutexCerrar){
 				//Decrementamos el numero de procesos que tienen abierto el mutex
@@ -784,38 +732,21 @@ int sis_cerrar_mutex(){
 					//Quitamos propietario
 					auxMutex->id_proceso_propietario=-1;
 				}
-				//printk("\nNumero procesos usando mutex (%d) Id mutex(%s)\n", auxMutex->num_procesos_usandolo, auxMutex->nombre);
-				//printk("auxMutex = %s", lista_mutex_global.primero->nombre);
+				//En caso de que nadie lo este usando, lo eliminamos de la lista global
 				if(auxMutex->num_procesos_usandolo == 0){
 					eliminar_elem_mutex(&lista_mutex_global, auxMutex);
 					num_mutex--;
 				}
-				//printk("\nSe ha cerrado correctamente (%s, %d)\n", auxMutex->nombre, auxMutex->id);
 				//Buscamos en la lista los procesos bloqueados por el mutex
 				BCP *auxProceso=auxMutex->lista_procesos_lock.primero;
+				//Avanzamos en la lista solo cogiendo el primer proceso
 				while(auxProceso!=NULL){
 					
 					auxProceso->estado=LISTO;
 					eliminar_primero(&auxMutex->lista_procesos_lock);
 					insertar_ultimo(&lista_listos, auxProceso);
-					//printk("IMPRIMIMOS LA LISTA DE LOS PROCESOS\n");
-					//printk("PROCESO %d con estado %d\n", auxProceso->id, auxProceso->estado);
 					auxProceso=auxMutex->lista_procesos_lock.primero;
 				}
-
-				//IMPRIMIMOS
-				/*printk("LISTA DE MUTEX EN EL PROCESO %d\n", p_proc_actual->id);
-				for(int i=0; i<p_proc_actual->num_mutex_asignados;i++)
-					printk("\tMUTEX %d\n", p_proc_actual->lista_mutex[i]);
-				printk("Lista Mutex(");
-				auxMutex = lista_mutex_global.primero;
-				while(auxMutex != NULL){
-					printk("[Nombre:%s, ID:%d, Procesos(%d), Estado:%d]\n", auxMutex->nombre, auxMutex->id, auxMutex->num_procesos_usandolo, auxMutex->estado);
-					auxMutex = auxMutex->siguiente;
-				}
-				printk(")\n");
-				*/
-				//printk("\n%s", lista_mutex_global.primero->nombre);
 				return 0;
 			}
 			auxMutex = auxMutex->siguiente;
@@ -826,11 +757,9 @@ int sis_cerrar_mutex(){
 		return -3;
 	}
 }
-
+//Funcion auxiliar que usamos en el lock y en el unlock para bloquear un proceso en el mutex que se pasa por parametro
 void bloquearMutex(mutex* mutexLock){
-	//printk("\nPROCESO ACTUAL BLOQUEADO. \nMANDANDO A DORMIR AL PROCESO: %d\n", p_proc_actual->id);
 	nivelAnterior =  fijar_nivel_int(NIVEL_3);
-	//Estamos eliminando el proceso actual?
 	eliminar_primero(&lista_listos);
 	int id = p_proc_actual->id;
 	//Cambiamos el estado a BLOQUEADO 
@@ -838,7 +767,6 @@ void bloquearMutex(mutex* mutexLock){
 	BCP * p_bloqueado = p_proc_actual;
 
 	insertar_ultimo(&mutexLock->lista_procesos_lock, p_bloqueado);
-	//printk("MUTEX A BLOQUEAR: %d\n", mutexLock->id);
 	// Asignamos el sieguiente proceso de la lista de listos como como el actual
 	p_proc_actual = planificador();
 	// Cambiamos el contexto para salvar los registros del proceso bloqueado y asignar los del nuevo
@@ -847,7 +775,6 @@ void bloquearMutex(mutex* mutexLock){
 
 	// Cambiamos el nivel para ejecutar la interrupcion de reloj y guardamos el anterior
 	fijar_nivel_int(nivelAnterior);
-	//printk("\nNUEVO PROCESO SE EJECUTA: PROCESO %d\n", p_proc_actual->id);
 }
 
 //
