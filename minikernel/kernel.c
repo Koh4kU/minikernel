@@ -494,6 +494,10 @@ int sis_crear_mutex(){
 
 	mutex *newMutex = (mutex*)malloc(sizeof(mutex));
 	mutex *auxMutex = lista_mutex_global.primero;
+
+	if(p_proc_actual->num_mutex_asignados == NUM_MUT_PROC){
+		return -1;
+	}
 	
 	char* nombre=(char*)leer_registro(1);
 	while(auxMutex != NULL){
